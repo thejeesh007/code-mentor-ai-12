@@ -23,9 +23,10 @@ interface LessonViewerProps {
   lesson: any;
   onBack: () => void;
   onComplete: () => void;
+  isDemo?: boolean;
 }
 
-export const LessonViewer = ({ lesson, onBack, onComplete }: LessonViewerProps) => {
+export const LessonViewer = ({ lesson, onBack, onComplete, isDemo = false }: LessonViewerProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [userCode, setUserCode] = useState('');
   const [isRunning, setIsRunning] = useState(false);

@@ -28,24 +28,39 @@ import { AITutorChat } from './AITutorChat';
 
 interface DashboardProps {
   userProfile: any;
+  currentUser: any;
   onBack: () => void;
+  onSignOut: () => void;
 }
 
-export const Dashboard = ({ userProfile, onBack }: DashboardProps) => {
+export const Dashboard = ({ userProfile, currentUser, onBack, onSignOut }: DashboardProps) => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'lesson' | 'chat'>('dashboard');
   const [selectedLesson, setSelectedLesson] = useState(null);
 
-  // Mock user data based on profile
-  const userData = {
-    name: "Alex Chen",
-    avatar: "",
-    level: 5,
-    xp: 2450,
-    xpToNext: 3000,
-    streak: 12,
-    completedLessons: 24,
-    certificates: 2,
-    currentSkills: ['Python', 'Variables', 'Loops', 'Functions']
+  // Load user progress from localStorage
+  const getUserProgress = () => {
+    const savedProgress = localStorage.getItem(`progress_${currentUser?.id || 'default'}`);
+    return savedProgress ? JSON.parse(savedProgress) : {
+      level: 1,
+      xp: 0,
+      xpToNext: 1000,
+      streak: 0,
+      completedLessons: 0,
+      certificates: 0,
+      currentSkills: []
+    };
+  };
+
+  const [userData, setUserData] = useState(() => ({
+    name: currentUser?.name || "Learner",
+    avatar: currentUser?.avatar || "",
+    ...getUserProgress()
+  }));
+
+  const updateProgress = (newProgress: any) => {
+    const updatedData = { ...userData, ...newProgress };
+    setUserData(updatedData);
+    localStorage.setItem(`progress_${currentUser?.id || 'default'}`, JSON.stringify(updatedData));
   };
 
   const learningPath = [
@@ -169,7 +184,7 @@ export const Dashboard = ({ userProfile, onBack }: DashboardProps) => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4">
             <Button 
               variant="outline" 
               size="sm"
@@ -179,6 +194,14 @@ export const Dashboard = ({ userProfile, onBack }: DashboardProps) => {
               AI Tutor
             </Button>
             
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onSignOut}
+            >
+              Sign Out
+            </Button>
+            
             <div className="flex items-center space-x-3">
               <div className="text-right">
                 <div className="text-sm font-medium">{userData.name}</div>
@@ -186,7 +209,7 @@ export const Dashboard = ({ userProfile, onBack }: DashboardProps) => {
               </div>
               <Avatar>
                 <AvatarImage src={userData.avatar} />
-                <AvatarFallback>AC</AvatarFallback>
+                <AvatarFallback>{userData.name?.charAt(0) || 'L'}</AvatarFallback>
               </Avatar>
             </div>
           </div>

@@ -1,14 +1,71 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Brain, Code, Target, Zap, Trophy, Users, ArrowRight, Play, Star } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Brain, Code, Target, Zap, Trophy, Users, ArrowRight, Play, Star, User, Lock } from 'lucide-react';
 import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { Dashboard } from '@/components/Dashboard';
+import { LessonViewer } from '@/components/LessonViewer';
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<'landing' | 'onboarding' | 'dashboard'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'onboarding' | 'dashboard' | 'demo'>('landing');
   const [userProfile, setUserProfile] = useState(null);
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [signInData, setSignInData] = useState({ email: '', password: '' });
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Load user data from localStorage on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('codementor_user');
+    const savedProfile = localStorage.getItem('codementor_profile');
+    if (savedUser && savedProfile) {
+      setCurrentUser(JSON.parse(savedUser));
+      setUserProfile(JSON.parse(savedProfile));
+    }
+  }, []);
+
+  const handleSignIn = () => {
+    // Simple mock authentication
+    if (signInData.email && signInData.password) {
+      const user = {
+        email: signInData.email,
+        name: signInData.email.split('@')[0],
+        id: Date.now()
+      };
+      setCurrentUser(user);
+      localStorage.setItem('codementor_user', JSON.stringify(user));
+      setIsSignInOpen(false);
+      
+      // Check if user has completed onboarding
+      const savedProfile = localStorage.getItem('codementor_profile');
+      if (savedProfile) {
+        setUserProfile(JSON.parse(savedProfile));
+        setCurrentView('dashboard');
+      } else {
+        setCurrentView('onboarding');
+      }
+    }
+  };
+
+  const handleSignOut = () => {
+    setCurrentUser(null);
+    setUserProfile(null);
+    localStorage.removeItem('codementor_user');
+    localStorage.removeItem('codementor_profile');
+    setCurrentView('landing');
+  };
+
+  const demoLesson = {
+    id: 'demo',
+    title: 'Python Basics Demo',
+    description: 'A quick introduction to Python programming',
+    status: 'available',
+    difficulty: 'Beginner',
+    estimatedTime: '10 min'
+  };
 
   const features = [
     {
@@ -49,6 +106,7 @@ const Index = () => {
       <OnboardingFlow
         onComplete={(profile) => {
           setUserProfile(profile);
+          localStorage.setItem('codementor_profile', JSON.stringify(profile));
           setCurrentView('dashboard');
         }}
         onBack={() => setCurrentView('landing')}
@@ -60,7 +118,20 @@ const Index = () => {
     return (
       <Dashboard 
         userProfile={userProfile}
+        currentUser={currentUser}
         onBack={() => setCurrentView('landing')}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
+
+  if (currentView === 'demo') {
+    return (
+      <LessonViewer
+        lesson={demoLesson}
+        onBack={() => setCurrentView('landing')}
+        onComplete={() => setCurrentView('landing')}
+        isDemo={true}
       />
     );
   }
@@ -84,18 +155,76 @@ const Index = () => {
           </nav>
 
           <div className="flex items-center space-x-3">
-            <Button 
-              variant="ghost" 
-              onClick={() => setCurrentView('dashboard')}
-            >
-              Sign In
-            </Button>
-            <Button 
-              className="btn-hero"
-              onClick={() => setCurrentView('onboarding')}
-            >
-              Start Learning
-            </Button>
+            {currentUser ? (
+              <>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setCurrentView('dashboard')}
+                >
+                  Dashboard
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleSignOut}
+                >
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Dialog open={isSignInOpen} onOpenChange={setIsSignInOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost">
+                      <User className="h-4 w-4 mr-2" />
+                      Sign In
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Sign In to CodeMentor AI</DialogTitle>
+                      <DialogDescription>
+                        Enter your credentials to access your learning dashboard
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={signInData.email}
+                          onChange={(e) => setSignInData({...signInData, email: e.target.value})}
+                          placeholder="Enter your email"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={signInData.password}
+                          onChange={(e) => setSignInData({...signInData, password: e.target.value})}
+                          placeholder="Enter your password"
+                        />
+                      </div>
+                      <Button 
+                        onClick={handleSignIn}
+                        className="w-full btn-hero"
+                        disabled={!signInData.email || !signInData.password}
+                      >
+                        Sign In
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Button 
+                  className="btn-hero"
+                  onClick={() => currentUser ? setCurrentView('dashboard') : setCurrentView('onboarding')}
+                >
+                  Start Learning
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -134,6 +263,7 @@ const Index = () => {
                 size="lg" 
                 variant="outline" 
                 className="btn-hero-outline w-full sm:w-auto"
+                onClick={() => setCurrentView('demo')}
               >
                 Watch Demo
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -264,9 +394,9 @@ const Index = () => {
             <Button 
               size="lg" 
               className="btn-hero text-xl px-12 py-6"
-              onClick={() => setCurrentView('onboarding')}
+              onClick={() => currentUser ? setCurrentView('dashboard') : setCurrentView('onboarding')}
             >
-              Start Your Free Trial
+              {currentUser ? 'Go to Dashboard' : 'Start Your Free Trial'}
               <ArrowRight className="ml-2 h-6 w-6" />
             </Button>
           </div>
